@@ -5,7 +5,7 @@ export const formBuyInsurance: Array<FormBuyInsuranceType> = [
     id: 1,
     label: "Insurance value: ",
     placeHolder: "Input value insurance",
-    name: "deposit",
+    name: "value",
     type: "number",
   },
   {
@@ -23,9 +23,9 @@ export const formBuyInsurance: Array<FormBuyInsuranceType> = [
   },
   {
     id: 3,
-    label: "Liquidation price ",
-    placeHolder: "Input liquidation price",
-    name: "liquidation_price",
+    label: "P-claim ",
+    placeHolder: "Input p-claim",
+    name: "p_claim",
     type: "number",
   },
   {

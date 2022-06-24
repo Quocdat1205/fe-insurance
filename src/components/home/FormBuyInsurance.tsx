@@ -31,30 +31,32 @@ const FormBuyInsurance = () => {
 
     const dataPost: BuyInsuranceType = {
       owner: account as string,
-      deposit: formatPriceToWeiValue(input.deposit),
+      value: formatPriceToWeiValue(input.deposit),
       current_price: data[0].h.toFixed(),
-      liquidation_price: input.liquidation_price,
+      p_claim: input.p_claim,
       expired: formatDate(input.expired),
     };
 
-    const buy =
-      await contractCaller.current?.insuranceContract.contract.buyInsurance(
-        dataPost.owner,
-        dataPost.deposit,
-        dataPost.current_price,
-        dataPost.liquidation_price,
-        dataPost.expired,
-        { value: dataPost.deposit }
-      );
+    console.log(dataPost);
 
-    if (buy) {
-      await buyInsurance(dataPost, accessToken);
+    // const buy =
+    //   await contractCaller.current?.insuranceContract.contract.buyInsurance(
+    //     dataPost.owner,
+    //     dataPost.value,
+    //     dataPost.current_price,
+    //     dataPost.p_claim,
+    //     dataPost.expired,
+    //     { value: dataPost.value }
+    //   );
 
-      swal("Buy success!");
-    } else {
-      console.log("Error submitting transaction");
-      swal("Error submitting transaction");
-    }
+    // if (buy) {
+    //   await buyInsurance(dataPost, accessToken);
+
+    //   swal("Buy success!");
+    // } else {
+    //   console.log("Error submitting transaction");
+    //   swal("Error submitting transaction");
+    // }
   };
 
   const validateValueInsurance = (value: number) => {
@@ -88,9 +90,9 @@ const FormBuyInsurance = () => {
   const validateExpired = (value: number) => {
     let status: Boolean | undefined = undefined;
     let date = new Date();
-    let date7 = date.setDate(date.getDate() + 7) / 1000;
+    let date_restrict = date.setDate(date.getDate() + 7) / 1000;
     switch (true) {
-      case value <= date7:
+      case value <= date_restrict:
         status = false;
         swal("Date expired must be 7 days from the current time");
         break;
