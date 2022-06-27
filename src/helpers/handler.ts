@@ -124,7 +124,14 @@ export const formatDate = (_date: Date) => {
 export const formatTimestampToDate = (_date: number) => {
   let date = _date * 1000;
 
-  let newDate = new Date(date).toLocaleDateString();
+  const dataPost: PriceClaim = {
+    deposit,
+    current_price: data[0].h.toFixed(),
+    liquidation_price,
+  };
+  const price = await getPriceClaim(dataPost, accessToken);
+  console.log(deposit, liquidation_price);
+  console.log(parseFloat(price));
 
   return newDate;
 };

@@ -47,11 +47,9 @@ const FormBuyInsurance = () => {
   const [input, setInput] = useState<any>();
   const [currentDay, setCurrentDay] = useState<any>();
   const [expiredDay, setExpiredDay] = useState<any>();
-  const [currency, setCurrency] = useState<any>("DAI");
-
+  const [currency, setCurrency] = useState<any>("USDT");
   const [coverValue, setCoverValue] = useState<any>(null);
-  const [pClaim, setPClaim] = useState<any>(null);
-
+  const [pClaim, setPClaim] = useState<any>();
   const [price, setPrice] = useState<any>();
 
   const [input2, setInput2] = useState<any>({
@@ -93,49 +91,32 @@ const FormBuyInsurance = () => {
     }
   };
 
-  //get date to display in cover period
-  const getDate = () => {
-    const date = new Date();
-    setCurrentDay(date.toLocaleDateString());
-    // new Date(date.setDate(date.getDate() + 7));
-    // return date.toLocaleDateString();
-  };
-  //get expired date to display in cover period
-  const getExpiredDay = (value: number) => {
-    const date1 = new Date();
-    let newDate = new Date(date1.setDate(date1.getDate() + value));
-    return newDate.getTime() / 1000;
-  };
-  //api get p-claim
-  const priceClaim = async () => {
-    const { data } = await getPriceEth();
-
+  const checkInputFullFill = async (e: any) => {
     const dataPost: PriceClaim = {
-      // deposit: input.cover_value,
-      deposit: 1,
-      current_price: data[0].h.toFixed(),
-      liquidation_price: input.p_claim,
-    };
-    const price = await getPriceClaim(dataPost, accessToken);
-    console.log(price);
-    setPrice(price);
-  };
-  //event check when cover value or p claim change
-  const check = () => {
-    const dataPost: PriceClaim = {
-      // deposit: input.cover_value,
-      deposit: input2.cover_value,
+      deposit: e.cover_value ? e.cover_value : input2.cover_value,
       current_price: 1,
       liquidation_price: input2.p_claim,
     };
-    if (dataPost.deposit !== null && dataPost.liquidation_price !== null) {
-      console.log(`dataPost.deposit: ${dataPost.deposit}`);
-      console.log(`dataPost.liquidation_price: ${dataPost.liquidation_price}`);
-      priceClaim();
+
+    if (checkNullValueInObject(dataPost)) {
+      setPClaim(
+        await priceClaim(
+          dataPost.deposit,
+          dataPost.liquidation_price,
+          accessToken
+        )
+      );
+    } else {
+      setPClaim(0);
     }
     // console.log(`coverValue: ${coverValue}`);
     // console.log(`pClaim: ${pClaim}`);
   };
+  // useEffect(() => {
+  //   if (!input2.cover_value || !input2.p_claim) {
+  //     setPClaim(0);
+  //   }
+  // }, [input2]);
 
   useEffect(() => {
     getDate();
@@ -248,10 +229,16 @@ const FormBuyInsurance = () => {
                                           ...input,
                                           [value.name]: e,
                                         });
-                                        setInput2({
-                                          ...input2,
-                                          [value.name]: e,
-                                        });
+                                        {
+                                          setInput2({
+                                            ...input2,
+                                            [value.name]: e,
+                                          });
+                                        }
+                                        // setInput2({
+                                        //   ...input2,
+                                        //   [value.name]: e,
+                                        // });
                                         {
                                           value.name === "cover_value"
                                             ? setCoverValue(e)
@@ -289,10 +276,11 @@ const FormBuyInsurance = () => {
                             ) : value.name === "p_claim" ? (
                               <Box fontSize={"12px"}>
                                 {/* display Expected value */}
-                                Expected value: {price}
+                                Expected value:{" "}
+                                {pClaim ? pClaim.toString().slice(0, 5) : 0}
                               </Box>
                             ) : (
-                              <Box>not ok</Box>
+                              <Box>z</Box>
                             )}
                           </Box>
                         </Td>
@@ -324,8 +312,12 @@ const FormBuyInsurance = () => {
             </Text>
             <Box>
               <Stat>
-                <StatLabel>Price Claim</StatLabel>
-                <StatNumber>0 {currency}</StatNumber>
+                <StatLabel>Expected value:</StatLabel>
+                <StatNumber>
+                  {pClaim ? pClaim.toString().slice(0, 5) : 0} ETH
+                </StatNumber>
+                <StatLabel>You'll pay:</StatLabel>
+                <StatNumber>{coverValue ? coverValue : 0} ETH</StatNumber>
                 <StatHelpText>
                   {currentDay} -{" "}
                   {expiredDay
