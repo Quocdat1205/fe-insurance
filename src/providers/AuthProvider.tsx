@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { AuthType, PropType, LogIntype } from "@types";
-import { logIn } from "@api";
+import { logIn, checkExpireToken } from "@api";
 import useWeb3Wallet from "@hooks/useWeb3Wallet";
 
 const initValue: AuthType = {
@@ -32,9 +32,24 @@ const AuthProvider = ({ children }: PropType) => {
     }
   };
 
+  const CheckExpireToken = async () => {
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+
+      const response = await checkExpireToken(accessToken as string);
+
+      if (!response) {
+        localStorage.removeItem("accessToken");
+      } else {
+        setAccessToken(accessToken as string);
+      }
+    } catch (error) {
+      localStorage.removeItem("accessToken");
+    }
+  };
+
   useEffect(() => {
-    const accessToken = localStorage.getItem("accessToken");
-    setAccessToken(accessToken as string);
+    CheckExpireToken();
   }, [account]);
 
   const value = {
