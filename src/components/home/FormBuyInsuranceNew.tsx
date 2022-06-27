@@ -1,20 +1,17 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Text,
   FormControl,
   FormLabel,
-  Input,
   Select,
   Button,
   Table,
   Thead,
   Tbody,
-  Tfoot,
   Tr,
   Th,
   Td,
-  TableCaption,
   TableContainer,
   NumberInput,
   NumberInputField,
@@ -29,48 +26,53 @@ import {
   StatHelpText,
 } from "@chakra-ui/react";
 import { CloseIcon, AddIcon } from "@chakra-ui/icons";
-
 import useWeb3Wallet from "@hooks/useWeb3Wallet";
-import {
-  formBuyInsurance,
-  formBuyInsuranceNew,
-} from "@constants/formBuyInsurance";
+import { formBuyInsuranceNew } from "@constants/formBuyInsurance";
 import { buyInsurance, getPriceEth, getPriceClaim } from "@api";
 import { BuyInsuranceType, PriceClaim } from "@types";
 import useAuth from "@hooks/useAuth";
-import { formatPriceToWeiValue, formatDate } from "@helpers/handler";
+import { formatPriceToWeiValue } from "@helpers/format";
 import swal from "sweetalert";
+import {
+  getExpiredDay,
+  priceClaim,
+  checkNullValueInObject,
+} from "@helpers/handler";
 
 const FormBuyInsurance = () => {
-  const { account, contractCaller } = useWeb3Wallet();
+  const { account, contractCaller, getBalance } = useWeb3Wallet();
   const { accessToken, handleLogIn } = useAuth();
   const [input, setInput] = useState<any>();
-  const [currentDay, setCurrentDay] = useState<any>();
+  const [currentDay, setCurrentDay] = useState<string>();
   const [expiredDay, setExpiredDay] = useState<any>();
   const [currency, setCurrency] = useState<any>("USDT");
   const [coverValue, setCoverValue] = useState<any>(null);
   const [pClaim, setPClaim] = useState<any>();
-  const [price, setPrice] = useState<any>();
-
   const [input2, setInput2] = useState<any>({
     cover_value: null,
     p_claim: null,
   });
-
+  const [priceEth, setPriceEth] = useState<any>();
+  const [balance, setBalance] = useState<any>();
+  const [checkedItems, setCheckedItems] = useState<any>(false);
+  useEffect(() => {
+    setCurrentDay(new Date().toLocaleDateString());
+    getCurrentPrice();
+    getBalanceAccount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   //buy insurance
   const handleBuyInsurance = async () => {
-    const { data } = await getPriceEth();
-
     if (!accessToken) return swal("Please sign metamask!");
-
+    const { data } = await getPriceEth();
     const dataPost: BuyInsuranceType = {
       owner: account as string,
-      deposit: formatPriceToWeiValue(input.cover_value),
       current_price: data[0].h.toFixed(),
       liquidation_price: input.p_claim,
+      deposit: formatPriceToWeiValue(input.cover_value),
       expired: expiredDay.toFixed(),
     };
-
+    console.log(dataPost.expired);
     const buy =
       await contractCaller.current?.insuranceContract.contract.buyInsurance(
         dataPost.owner,
@@ -80,24 +82,24 @@ const FormBuyInsurance = () => {
         dataPost.expired,
         { value: dataPost.deposit }
       );
-
     if (buy) {
-      await buyInsurance(dataPost, accessToken);
-
+      try {
+        await buyInsurance(dataPost, accessToken);
+      } catch (error) {
+        console.log(error);
+      }
       swal("Buy success!");
     } else {
-      console.log("Error submitting transaction");
+      console.error("Error submitting transaction");
       swal("Error submitting transaction");
     }
   };
-
   const checkInputFullFill = async (e: any) => {
     const dataPost: PriceClaim = {
       deposit: e.cover_value ? e.cover_value : input2.cover_value,
       current_price: 1,
-      liquidation_price: input2.p_claim,
+      liquidation_price: e.p_claim ? e.p_claim : input2.p_claim,
     };
-
     if (checkNullValueInObject(dataPost)) {
       setPClaim(
         await priceClaim(
@@ -109,21 +111,16 @@ const FormBuyInsurance = () => {
     } else {
       setPClaim(0);
     }
-    // console.log(`coverValue: ${coverValue}`);
-    // console.log(`pClaim: ${pClaim}`);
   };
-  // useEffect(() => {
-  //   if (!input2.cover_value || !input2.p_claim) {
-  //     setPClaim(0);
-  //   }
-  // }, [input2]);
-
-  useEffect(() => {
-    getDate();
-    console.log(accessToken);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
+  const getCurrentPrice = async () => {
+    const { data } = await getPriceEth();
+    setPriceEth(data[0].h.toFixed());
+  };
+  const getBalanceAccount = async () => {
+    const bal = await getBalance();
+    console.log(`bal: ${bal}`);
+    setBalance(bal);
+  };
   return (
     <Box marginTop="1rem">
       <Box>
@@ -139,7 +136,7 @@ const FormBuyInsurance = () => {
         <Button
           onClick={() => handleLogIn()}
           margin="0.5rem"
-          background="#76c376"
+          background="#76C376"
         >
           Sign
         </Button>
@@ -165,8 +162,8 @@ const FormBuyInsurance = () => {
               <Table variant="simple">
                 <Thead>
                   <Tr>
-                    <Th></Th>
-                    {/* <Th>asset</Th> */}
+                    {/* <Th></Th> */}
+                    <Th>asset</Th>
                     <Th>cover value</Th>
                     <Th>p-claim</Th>
                     <Th>cover period</Th>
@@ -181,9 +178,9 @@ const FormBuyInsurance = () => {
                 </Thead>
                 <Tbody>
                   <Tr>
-                    <Td>
-                      <Checkbox colorScheme="green"></Checkbox>
-                    </Td>
+                    {/* <Td>
+                    <Checkbox colorScheme="green"></Checkbox>
+                  </Td> */}
                     {/* COVER VALUE */}
                     {formBuyInsuranceNew.map((value) => {
                       return (
@@ -192,18 +189,29 @@ const FormBuyInsurance = () => {
                             <>
                               {value.options.map((v) => {
                                 return (
-                                  <FormControl key={v.label}>
-                                    <FormLabel htmlFor="coint"></FormLabel>
-                                    <Select
-                                      w={"100%"}
-                                      // placeholder="Select coin"
-                                      name="coin"
-                                      id="coin"
-                                      fontSize={"12px"}
-                                    >
-                                      <option value={v.value}>{v.label}</option>
-                                    </Select>
-                                  </FormControl>
+                                  <Box key={v.label}>
+                                    <FormControl key={v.label} marginTop="10px">
+                                      {/* <FormLabel htmlFor="coint"></FormLabel> */}
+                                      <Select
+                                        w="70%"
+                                        name="coin"
+                                        id="coin"
+                                        fontSize={"12px"}
+                                      >
+                                        <option value={v.value}>
+                                          {v.label}
+                                        </option>
+                                      </Select>
+                                      <Box fontSize={"12px"} paddingTop="10px">
+                                        Current price:{" "}
+                                        {v.value === "eth" ? (
+                                          priceEth
+                                        ) : (
+                                          <Box></Box>
+                                        )}
+                                      </Box>
+                                    </FormControl>
+                                  </Box>
                                 );
                               })}
                             </>
@@ -216,15 +224,15 @@ const FormBuyInsurance = () => {
                                 className={`${value.name}`}
                                 onChange={
                                   value.isDay
-                                    ? (e) => {
+                                    ? (e: any) => {
                                         setExpiredDay(getExpiredDay(Number(e)));
                                         setInput({
                                           ...input,
                                           [value.name]: e,
                                         });
-                                        check();
+                                        checkInputFullFill({ [value.name]: e });
                                       }
-                                    : (e) => {
+                                    : (e: any) => {
                                         setInput({
                                           ...input,
                                           [value.name]: e,
@@ -235,16 +243,12 @@ const FormBuyInsurance = () => {
                                             [value.name]: e,
                                           });
                                         }
-                                        // setInput2({
-                                        //   ...input2,
-                                        //   [value.name]: e,
-                                        // });
                                         {
                                           value.name === "cover_value"
                                             ? setCoverValue(e)
                                             : setPClaim(e);
                                         }
-                                        check();
+                                        checkInputFullFill({ [value.name]: e });
                                       }
                                 }
                               >
@@ -261,7 +265,6 @@ const FormBuyInsurance = () => {
                               </FormLabel>
                             </Box>
                           )}
-
                           <Box marginTop={"10px"}>
                             {value.name === "cover_period" ? (
                               <Box fontSize={"12px"}>
@@ -276,17 +279,18 @@ const FormBuyInsurance = () => {
                             ) : value.name === "p_claim" ? (
                               <Box fontSize={"12px"}>
                                 {/* display Expected value */}
-                                Expected value:{" "}
+                                Cover Payout:{" "}
                                 {pClaim ? pClaim.toString().slice(0, 5) : 0}
                               </Box>
+                            ) : value.name === "asset" ? (
+                              <Box fontSize={"12px"}></Box>
                             ) : (
-                              <Box>z</Box>
+                              <Box>ㅤ</Box>
                             )}
                           </Box>
                         </Td>
                       );
                     })}
-
                     {/* ADD ICON */}
                     <Td isNumeric>
                       <IconButton
@@ -307,40 +311,50 @@ const FormBuyInsurance = () => {
             borderRadius="lg"
             overflow="hidden"
           >
-            <Text color="rgb(58, 138, 132)" fontWeight="bold" fontSize="1.5rem">
+            <Text
+              color="rgb(58, 138, 132)"
+              fontWeight="bold"
+              fontSize="1.5rem"
+              padding={"10px 0"}
+            >
               Summary Order
             </Text>
             <Box>
               <Stat>
-                <StatLabel>Expected value:</StatLabel>
-                <StatNumber>
+                <StatLabel>Available:</StatLabel>
+                <StatNumber color={"teal"} fontWeight="bold" fontSize={"18px"}>
+                  {balance && balance.toString().slice(0, 7)} ETH
+                </StatNumber>
+                <StatLabel>You’ll pay:</StatLabel>
+                <StatNumber color={"teal"} fontWeight="bold" fontSize={"18px"}>
+                  {coverValue ? coverValue : 0} ETH
+                </StatNumber>
+                <StatLabel>Total cover payout:</StatLabel>
+                <StatNumber color={"teal"} fontWeight="bold">
                   {pClaim ? pClaim.toString().slice(0, 5) : 0} ETH
                 </StatNumber>
-                <StatLabel>You'll pay:</StatLabel>
-                <StatNumber>{coverValue ? coverValue : 0} ETH</StatNumber>
                 <StatHelpText>
                   {currentDay} -{" "}
                   {expiredDay
                     ? new Date(expiredDay * 1000).toLocaleDateString()
                     : currentDay}
                 </StatHelpText>
+                <Checkbox
+                  colorScheme="teal"
+                  onChange={(e) => setCheckedItems(e.target.checked)}
+                >
+                  I agree to the terms and conditions.
+                </Checkbox>
               </Stat>
               <Button
                 colorScheme="teal"
                 size="md"
                 margin={"20px 0"}
+                isDisabled={!checkedItems}
                 onClick={() => handleBuyInsurance()}
               >
                 Confirm
               </Button>
-              {/* <Button
-                colorScheme="teal"
-                size="md"
-                margin={"20px 0"}
-                onClick={() => priceClaim()}
-              >
-                Test
-              </Button> */}
             </Box>
           </Box>
         </Box>
@@ -348,5 +362,4 @@ const FormBuyInsurance = () => {
     </Box>
   );
 };
-
 export default FormBuyInsurance;

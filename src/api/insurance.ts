@@ -1,6 +1,6 @@
 import { fetcher } from ".";
 import { LogIntype, BuyInsuranceType, PriceClaim } from "src/types/insurance";
-import { parseNumber } from "@helpers/handler";
+import { parseNumber } from "@helpers/format";
 
 export const logIn = async (props: LogIntype) => {
   try {

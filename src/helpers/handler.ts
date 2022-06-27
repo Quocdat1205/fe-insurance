@@ -1,7 +1,15 @@
 import { Chains } from "@constants/chains";
-import { ChainData } from "@types";
-import { BigNumber, ethers } from "ethers";
-
+import { ChainData, PriceClaim } from "@types";
+import type { AddEthereumChainParameter } from "@web3-react/types";
+import { getPriceEth, getPriceClaim } from "@api";
+interface BasicChainInformation {
+  urls: string[];
+  name: string;
+}
+interface ExtendedChainInformation extends BasicChainInformation {
+  nativeCurrency: AddEthereumChainParameter["nativeCurrency"];
+  blockExplorerUrls: AddEthereumChainParameter["blockExplorerUrls"];
+}
 export const truncateAddress = (address: string) => {
   if (!address) return "No Account";
   const match = address.match(
@@ -10,12 +18,10 @@ export const truncateAddress = (address: string) => {
   if (!match) return address;
   return `${match[1]}…${match[2]}`;
 };
-
 export const toHex = (num: number) => {
   const val = Number(num);
   return "0x" + val.toString(16);
 };
-
 export function getChainId(network: string): number {
   const chains: ChainData[] = Object.values(Chains);
   const match = filterMatches<ChainData>(
@@ -28,7 +34,6 @@ export function getChainId(network: string): number {
   }
   return match.chainId;
 }
-
 export function filterMatches<T>(
   array: T[],
   condition: (x: T) => boolean,
@@ -36,26 +41,11 @@ export function filterMatches<T>(
 ): T | undefined {
   let result = fallback;
   const matches = array.filter(condition);
-
   if (!!matches && matches.length) {
     result = matches[0];
   }
-
   return result;
 }
-
-import type { AddEthereumChainParameter } from "@web3-react/types";
-
-interface BasicChainInformation {
-  urls: string[];
-  name: string;
-}
-
-interface ExtendedChainInformation extends BasicChainInformation {
-  nativeCurrency: AddEthereumChainParameter["nativeCurrency"];
-  blockExplorerUrls: AddEthereumChainParameter["blockExplorerUrls"];
-}
-
 export const CHAINS: {
   [chainId: number]: BasicChainInformation | ExtendedChainInformation;
 } = {
@@ -63,24 +53,20 @@ export const CHAINS: {
     urls: ["https://mainnet.infura.io/v3/f87b967bc65a41c0a1a25635493fa482"],
     name: "Mainnet",
   },
-
   4: {
     urls: ["https://rinkeby.infura.io/v3/f87b967bc65a41c0a1a25635493fa482"],
     name: "Rinkeby",
   },
-
   42: {
     urls: ["https://kovan.infura.io/ws/v3/f87b967bc65a41c0a1a25635493fa482"],
     name: "Kovan",
   },
 };
-
 function isExtendedChainInformation(
   chainInformation: BasicChainInformation | ExtendedChainInformation
 ): chainInformation is ExtendedChainInformation {
   return !!(chainInformation as ExtendedChainInformation).nativeCurrency;
 }
-
 export function getAddChainParameters(
   chainId: number
 ): AddEthereumChainParameter | number {
@@ -97,33 +83,28 @@ export function getAddChainParameters(
     return chainId;
   }
 }
-
 export const URLS: { [chainId: number]: string[] } = Object.keys(
   CHAINS
 ).reduce<{ [chainId: number]: string[] }>((accumulator, chainId) => {
   const validURLs: string[] = CHAINS[Number(chainId)].urls;
-
   if (validURLs.length) {
     accumulator[Number(chainId)] = validURLs;
   }
-
   return accumulator;
 }, {});
-
-export const etherToWei = (amount: number | string) =>
-  ethers.utils.parseEther(amount.toString());
-
-export const weiToEther = (wei: string | BigNumber) =>
-  parseFloat(ethers.utils.formatEther(wei));
-
-export const formatDate = (_date: Date) => {
-  let newDate = new Date(_date);
-  return newDate.getTime() / 1000;
+export const getExpiredDay = (value: number) => {
+  const current_date = new Date();
+  let expiredDate = new Date(
+    current_date.setDate(current_date.getDate() + value)
+  );
+  return expiredDate.getTime() / 1000;
 };
-
-export const formatTimestampToDate = (_date: number) => {
-  let date = _date * 1000;
-
+export const priceClaim = async (
+  deposit: number | bigint,
+  liquidation_price: number | bigint,
+  accessToken: string
+) => {
+  const { data } = await getPriceEth();
   const dataPost: PriceClaim = {
     deposit,
     current_price: data[0].h.toFixed(),
@@ -132,18 +113,14 @@ export const formatTimestampToDate = (_date: number) => {
   const price = await getPriceClaim(dataPost, accessToken);
   console.log(deposit, liquidation_price);
   console.log(parseFloat(price));
-
-  return newDate;
+  return price;
 };
-
-export const formatPriceToWeiValue = (_num: number) => {
-  return BigInt(_num * 10 ** 18);
-};
-
-export const formatWeiValueToPrice = (_num: number) => {
-  return Number(_num) / 10 ** 18;
-};
-
-export const parseNumber = (_number: any) => {
-  return parseInt(_number);
+export const checkNullValueInObject = (obj: Object): boolean => {
+  const isNullish = Object.values(obj).every((value) => {
+    if (!value) {
+      return false;
+    }
+    return true;
+  });
+  return isNullish;
 };

@@ -14,7 +14,7 @@ import { formBuyInsurance } from "@constants/formBuyInsurance";
 import { buyInsurance, getPriceEth } from "@api";
 import { BuyInsuranceType } from "@types";
 import useAuth from "@hooks/useAuth";
-import { formatPriceToWeiValue, formatDate } from "@helpers/handler";
+import { formatPriceToWeiValue, formatDateToTimestamp } from "@helpers/format";
 import swal from "sweetalert";
 
 const FormBuyInsurance = () => {
@@ -27,15 +27,15 @@ const FormBuyInsurance = () => {
     //validate
     if (!validateValueInsurance(input.deposit)) return;
     if (!validateLiquidationPrice(input.liquidation_price)) return;
-    if (!validateExpired(formatDate(input.expired))) return;
+    if (!validateExpired(formatDateToTimestamp(input.expired))) return;
     if (!accessToken) return swal("Please sign metamask!");
 
     const dataPost: BuyInsuranceType = {
       owner: account as string,
-      value: formatPriceToWeiValue(input.deposit),
+      deposit: formatPriceToWeiValue(input.deposit),
       current_price: data[0].h.toFixed(),
-      p_claim: input.p_claim,
-      expired: formatDate(input.expired),
+      liquidation_price: input.p_claim,
+      expired: formatDateToTimestamp(input.expired),
     };
 
     console.log(dataPost);

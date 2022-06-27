@@ -6,8 +6,8 @@ export type LogIntype = {
 export type BuyInsuranceType = {
   owner: string;
   current_price: number;
-  p_claim: bigint;
-  value: number | bigint;
+  liquidation_price: bigint;
+  deposit: number | bigint;
   expired: number;
 };
 export type PriceClaim = {
